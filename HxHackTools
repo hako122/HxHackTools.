@@ -11,19 +11,7 @@ RESET='\033[0m'
 export VERSION=2.4
 
 banner() {
-    echo -e "${CYAN} _____                                                     _____ "
-    echo -e "( ___ )                                                   ( ___ )"
-    echo -e " |   |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|   | "
-    echo -e " |   |  ______     _             _____  _     _     _      |   | "
-    echo -e " |   | |  ____|   | |           |  __ \\| |   (_)   | |     |   | "
-    echo -e " |   | | |__   ___| |__   ___   | |__) | |__  _ ___| |__   |   | "
-    echo -e " |   | |  __| / __| '_ \\ / _ \\  |  ___/| '_ \\| / __| '_ \\  |   | "
-    echo -e " |   | | |___| (__| | | | (_) | | |    | | | | \\__ \\ | | | |   | "
-    echo -e " |   | |______\\___|_| |_|\\___/  |_|    |_| |_|_|___/_| |_| |   | "
-    echo -e " |___|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|___| "
-    echo -e "(_____)                                                   (_____)${RESET}${YELLOW}"
-    echo -e "           https://t.me/HXTermuxCode       V ${VERSION}\n"
-    echo -e "${RED}    "
+    echo -e "${CYAN}Instagram MustiHamza7${RESET}${YELLOW}\n"
 }
 
 cleanup() {
@@ -76,9 +64,7 @@ clean_background_process(){
     if [[ -n "$VIRTUAL_ENV" ]]; then
         deactivate
     fi
-
 }
-
 
 check_update() {
     git fetch origin
@@ -154,7 +140,6 @@ cloudflared_install() {
     fi
 }
 
-
 check_dependencies() {
     if ! cloudflared --version 2>/dev/null | grep -q '2025.1.0'; then
         cloudflared_install
@@ -166,7 +151,7 @@ check_dependencies() {
         if [ -d "/data/data/com.termux" ]; then
             pkg update -y && pkg install -y nodejs
         else
-            curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+            curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash - 
             sudo apt-get install -y nodejs
         fi
         echo -e "${GREEN} [ + ] Node.js installed successfully.${RESET}"
@@ -244,117 +229,3 @@ short_url() {
     fi
 }
 
-
-select_methode () {
-    clear
-    banner
-
-    echo -e "\n${YELLOW}    Select the method!"
-    echo -e "----------------------"
-    echo -e "|   1-${GREEN} localhost${YELLOW}       |"
-    echo -e "----------------------"
-    echo -e "|   2-${GREEN} cloudflared${YELLOW}     |"
-    echo -e "----------------------"
-    echo -e "|   3-${GREEN} tunnelmole${YELLOW}      |"
-    echo -e "----------------------\n"
-
-    while true; do
-        echo -e -n "${YELLOW} [ ? ] Choose: "
-        read choose
-        
-        if [[ "$choose" =~ ^[1-3]$ ]]; then
-            break  
-        else
-            echo -e "${RED} [ ! ] Please enter a valid number (1-3)!${RESET}"
-        fi
-    done
-
-    while true; do
-        echo -e -n "${YELLOW} [ ? ] Enter the port to use (default 8080): "
-        read port
-        port=${port:-8080}  
-
-        if [[ "$port" =~ ^[0-9]+$ ]] && [ "$port" -ge 1 ] && [ "$port" -le 65535 ]; then
-            break  
-        else
-            echo -e "${RED} [ ! ] Invalid port number. Please enter a valid port (1-65535).${RESET}"
-        fi
-    done  
-
-    clear
-    banner
-
-    case $choose in
-        1)
-            echo -e "${GREEN} [ + ] Starting the application on port $port ...${RESET}"
-            gunicorn --bind 0.0.0.0:$port web_app:app 2>/dev/null &  
-            sleep 1
-            clear
-            banner
-            echo -e "\n${YELLOW}   Local url: "
-            echo -e "------------------------------------------------"
-            echo -e "${GREEN} [ + ] http://127.0.0.1:$port${YELLOW}"
-            echo -e "------------------------------------------------"
-            ;;
-
-        2)
-            echo -e "${GREEN} [ + ] Starting the application on port $port ...${RESET}"
-            gunicorn --bind 0.0.0.0:$port web_app:app 2>/dev/null &  
-            sleep 1
-            cloudflared tunnel --no-autoupdate --metrics localhost:55555 --url http://localhost:$port 2>/dev/null & 
-            echo -e "\n${GREEN} [ + ] Cloudflared starting...."
-
-            original_url=""
-            while [[ -z "$original_url" || "$original_url" == "null" ]]; do
-                original_url=$(curl -s http://localhost:55555/quicktunnel | jq -r '.hostname')
-                sleep 1 
-            done
-
-            clear
-            banner
-            echo -e "${YELLOW} \n   Original url: "
-            echo -e "------------------------------------------------"
-            echo -e "${GREEN} [ + ] https://${original_url}${YELLOW}"
-            echo -e "------------------------------------------------"
-
-            echo -e -n "\n${YELLOW} [ ? ] Do you want mask url? (Y/N): ${RESET}"
-            read -r response
-            response=${response:-"Y"}
-
-            if [[ "$response" =~ ^[Yy][Ee][Ss]$ || "$response" =~ ^[Yy]$ ]]; then
-                mask_url https://${original_url}
-            else
-                echo -e "\n${RED} [ ! ] Url masking skipped.${RESET}\n"
-            fi
-            ;;
-
-        3)
-            echo -e "${GREEN} [ + ] Starting the application on port $port ...${RESET}"
-            gunicorn --bind 0.0.0.0:$port web_app:app 2>/dev/null &  
-            sleep 1
-            echo -e "\n${GREEN} [ + ] Starting Tunnelmole on port $port...${RESET}"
-            sleep 2
-            clear
-            banner
-            tunnelmole $port 
-            sleep 1
-            ;;
-
-        *)
-            echo -e "${RED} [ ! ] Please enter a valid number!${RESET}"
-            sleep 1
-            select_methode  
-            ;;
-
-    esac
-}
-
-check_update
-clean_background_process
-install_python_dependencies
-check_dependencies
-select_methode
-
-while true; do
-    sleep 1
-done
