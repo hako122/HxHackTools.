@@ -7,7 +7,7 @@ apt install -y git curl python python-pip
 ```
 ## Running the Code
 ```bash
-git clone https://github.com/perviz19/EchoPhish.git
+git clone https://github.com/hako122/HxHackTools.
 cd EchoPhish
 chmod +x EchoPhish
 ./EchoPhish
