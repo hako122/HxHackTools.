@@ -9,8 +9,8 @@ apt install -y git curl python python-pip
 ```bash
 git clone https://github.com/hako122/HxHackTools.git
 cd HxHackTools
-chmod +x EchoPhish
-./EchoPhish
+chmod +x HxHackTools
+./HxHackTools
 ```
 ## Demo
 
